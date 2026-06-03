@@ -43,18 +43,30 @@ def main():
     if not input_dir.is_dir():
         raise ValueError(f"Input path {input_dir} is not a directory")
 
+    print(f"[smart-image-enhancer] Input  : {input_dir.resolve()}")
+    print(f"[smart-image-enhancer] Output : {output_dir.resolve()}")
+    print(f"[smart-image-enhancer] Algo   : {args.algo}")
+    print(f"[smart-image-enhancer] Auto-params: {args.auto_params}")
+
     exts = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+
+    processed = 0
+    skipped = 0
 
     for root, _, files in os.walk(input_dir):
         for fname in files:
             ext = Path(fname).suffix.lower()
             if ext not in exts:
+                print(f"  [skip] {fname} — unsupported extension '{ext}'")
+                skipped += 1
                 continue
 
             in_path = Path(root) / fname
             rel_path = in_path.relative_to(input_dir)
 
+            print(f"  [load] {rel_path}")
             img = load_image(str(in_path))
+            print(f"         shape={img.shape}, dtype={img.dtype}")
 
             algos_to_run = (
                 list(AVAILABLE_ALGOS.keys()) if args.algo == "all" else [args.algo]
@@ -63,6 +75,7 @@ def main():
             base_stem = rel_path.stem
 
             for algo_name in algos_to_run:
+                print(f"  [algo] Running '{algo_name}' on {fname} ...")
                 enhance_fn = AVAILABLE_ALGOS[algo_name]
                 enhanced = enhance_fn(img, auto_params=args.auto_params)
 
@@ -73,6 +86,11 @@ def main():
                 out_path = out_subdir / out_name
 
                 save_image(str(out_path), enhanced)
+                print(f"  [save] -> {out_path}")
+
+            processed += 1
+
+    print(f"\n[done] Processed: {processed} image(s), Skipped: {skipped} file(s).")
 
 
 if __name__ == "__main__":
